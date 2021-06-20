@@ -213,9 +213,22 @@ async def handler_bob(event: NewMessage):
         if poll.poll_msg_id is None:
             logger.error("still not ready, oh well...")
             await event.reply(f"There's already a vote in progress!")
+            return
         else:
-            await event.reply(f'Please vote <a href="https://t.me/c/{str(chat_id)[4:]}/{poll.poll_msg_id}">here</a> instead.')
-        return
+            msg: Optional[Message] = None
+            async for m in client.iter_messages(entity=chat_ent, ids=poll.poll_msg_id):
+                msg = m
+                break # lol
+
+            if msg is not None:
+                await event.reply(f'Please vote <a href="https://t.me/c/{str(chat_id)[4:]}/{poll.poll_msg_id}">here</a> instead.')
+                return
+            else:
+                logger.warning("Our old poll message got deleted for some reason!")
+                poll.ended = True
+                await poll.save()
+                _, poll = await Poll.get_poll(chat=chat, target=target, source=from_user, msg_id=target_msg.id, force=force)
+            
 
     msg_dict: Dict[str, Union[str, List[Button]]] = await bob_vote(poll, from_user, VoteChoice.YES)
 
