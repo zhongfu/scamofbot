@@ -1,0 +1,2 @@
+telethon==1.22.0
+tortoise-orm==0.17.4

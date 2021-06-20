@@ -1,0 +1,7 @@
+/*.sqlite
+/*.session
+/*.log
+/config.py
+__pycache__
+/samples
+*.swp

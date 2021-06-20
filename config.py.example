@@ -1,0 +1,24 @@
+from datetime import timedelta
+
+#DATABASE_HOST = 'localhost'
+#DATABASE_NAME = 'despacito'
+#DATABASE_USER = 'yoloswag'
+#DATABASE_PASS = 'hunter2'
+#DATABASE_URI = f"postgresql://{db_user}:{db_pass}@{db_host}/{db_name}"
+DATABASE_URI = "sqlite://scamofbot.sqlite"
+
+TG_BOT_NAME = 'scamofbot'
+TG_SESSION = 'scamofbot'
+TG_API_ID =
+TG_API_HASH = ''
+TG_API_TOKEN = ''
+TG_BOT_ID = int(TG_API_TOKEN.split(':')[0])
+TG_BOT_USERNAME = ''
+
+TG_LOG_CHANNEL =
+
+POLL__CHANNELS = ()
+
+POLL__THRESHOLD = 8 # number of votes before we process an action
+POLL__LIMIT = 16 # maximum number of polls allowed in POLL__LIMIT_DURATION
+POLL__LIMIT_DURATION = timedelta(hours=12) # see above
