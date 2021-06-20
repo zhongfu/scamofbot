@@ -41,7 +41,7 @@ async def init_db():
 
 		try:
 			modname = f"app.{module}.models"
-			test = importlib.import_module('.models', package=f'app.{module}')
+			importlib.import_module('.models', package=f'app.{module}')
 			logger.info(f'adding app.{module}.models')
 			tortoise_models.append(f'app.{module}.models')
 		except ModuleNotFoundError as e:
@@ -56,7 +56,7 @@ async def init_db():
 			timezone="Asia/Singapore"
 		)
 		await Tortoise.generate_schemas()
-	except:
+	except Exception:
 		logger.exception("help")
 
 async def startup():
