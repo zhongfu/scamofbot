@@ -32,7 +32,7 @@ async def is_admin(channel, user):
         return isadmin or iscreator
     except UserNotParticipantError:
         # then this dude's definitely not an admin or the creator of the chat
-        return false
+        return False
 
 
 """
