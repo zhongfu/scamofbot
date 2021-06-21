@@ -87,7 +87,7 @@ async def build_bob_message(poll: Poll, ended: bool, counts: Dict[VoteChoice, in
         users: str = ', '.join([user.get_link() for user in users_list])
         message_lines = [
             f"The community has decided that {poll.target.get_link()} should {'' if kicked else 'not '}be banned.",
-            f"The following users voted {'Yes' if kicked else 'No'}: {users}"
+            f"The following users voted {'yes' if kicked else 'no'}: {users}"
         ]
 
         return {
