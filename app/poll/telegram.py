@@ -238,7 +238,7 @@ async def handler_bob(event: NewMessage):
 
     msg_dict: Dict[str, Union[str, List[Button]]] = await bob_vote(poll, from_user, VoteChoice.YES)
 
-    msg: Message = await event.reply(
+    msg: Message = await target_msg.reply(
         msg_dict['message'],
         buttons = msg_dict.get('buttons')
     )
