@@ -282,5 +282,6 @@ async def handler_bob_callback(event):
             msg_dict['message'],
             buttons = msg_dict.get('buttons')
         )
+        await event.answer(f"You've voted for {choice_str.capitalize()}!")
     else:
-        await event.answer()
+        await event.answer("You can't vote for the same choice multiple times.")
