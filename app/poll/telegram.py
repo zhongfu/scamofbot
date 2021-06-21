@@ -122,8 +122,6 @@ async def bob_vote(poll: Poll, user: TelegramUser, choice: VoteChoice) -> Dict[s
                 msg = m
                 break # lol
 
-            to_ban = msg.from_id
-
             if msg is not None:
                 try:
                     await msg.delete()
@@ -132,6 +130,8 @@ async def bob_vote(poll: Poll, user: TelegramUser, choice: VoteChoice) -> Dict[s
                     need_delete_perms = True
                 except Exception:
                     logger.exception(f"Uh oh, got an exception while trying to delete a message ({poll})")
+
+            to_ban = await get_user(poll.target.user_id)
 
             try:
                 await client.edit_permissions(channel_ent, to_ban, view_messages=False)
