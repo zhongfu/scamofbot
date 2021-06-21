@@ -142,7 +142,7 @@ class Poll(Model):
             raise
         except DoesNotExist:
             vote: Vote = Vote(poll=self, user=user)
-            new: bool = False
+            new: bool = True
         
         # at this point, we've either got an existing vote that needs to be changed
         # or a new vote
