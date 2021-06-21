@@ -119,7 +119,7 @@ class TelegramChat(Model):
     def __repr__(self):
         attrs: Dict[str, Union[str, int]] = {"chat_id": self.chat_id}
 
-        if self.link:
+        if self.chat_link:
             attrs['chat_link'] = self.chat_link
 
         attrs['chat_title'] = self.chat_title
