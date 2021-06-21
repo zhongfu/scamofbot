@@ -101,12 +101,9 @@ async def bob_vote(poll: Poll, user: TelegramUser, choice: VoteChoice) -> Dict[s
     
     counts: Dict[VoteChoice, int] = await poll.get_vote_stats()
 
-    ended = False
-    for choice, count in counts.items():
-        if count >= POLL__THRESHOLD:
-            ended = True
-            break
-    
+    ended = poll.ended
+    choice = await poll.vote_winner()
+
     if ended:
         need_delete_perms: bool = False
         need_ban_perms: bool = False

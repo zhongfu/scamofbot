@@ -95,7 +95,7 @@ class Poll(Model):
         # if we got a suitable Poll instance
         if poll is not None:
             # but it's already finished...
-            if await poll.vote_finished():
+            if await poll.vote_winner() is not None:
                 poll.ended = True
                 await poll.save()
                 logger.warning(f"Got a poll {poll} that has already ended, let's try again")
@@ -154,7 +154,7 @@ class Poll(Model):
             await vote.save()
             logger.info(f"Updating vote choice to {choice} for vote id {vote.vote_id}")
         
-        if await self.vote_finished():
+        if await self.vote_winner() is not None:
             self.ended = True
             await self.save()
             logger.info(f"Poll finished for {self.poll_id}")
@@ -162,6 +162,10 @@ class Poll(Model):
             vote.choice = choice
             await vote.save()
             logger.info(f"Creating new vote by {user} for {choice} on poll {self.poll_id} with vote id {vote.vote_id}")
+            if await self.vote_winner() is not None: # oh?
+                self.ended = True
+                await self.save()
+                logger.info(f"Poll finished for {self.poll_id}")
         
         return True
     
@@ -176,13 +180,13 @@ class Poll(Model):
         
         return ret
     
-    async def vote_finished(self) -> bool:
+    async def vote_winner(self) -> Optional[VoteChoice]:
         stats: Dict[VoteChoice, int] = await self.get_vote_stats()
         for choice, count in stats.items():
             if count >= POLL__THRESHOLD:
-                return True
+                return choice
 
-        return False
+        return None
 
     
     async def get_voters(self, choice: VoteChoice) -> List[TelegramUser]:
