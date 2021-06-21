@@ -115,8 +115,8 @@ class Poll(Model):
                 raise PollLimitReached(chat, poll_type, timestamp)
 
             poll: Poll = Poll(poll_type=poll_type, chat=chat, source=source, target=target, msg_id=msg_id)
-            logger.info(f"Created new poll")
             await poll.save()
+            logger.info(f"Created new poll {poll.poll_id} in {chat}, type {poll_type}, source {source}, target {target}")
             return (False, poll)
 
     async def set_poll_msg_id(self, poll_msg_id: int):
@@ -152,13 +152,16 @@ class Poll(Model):
         if not new:
             vote.choice = choice
             await vote.save()
+            logger.info(f"Updating vote choice to {choice} for vote id {vote.vote_id}")
         
         if await self.vote_finished():
             self.ended = True
             await self.save()
+            logger.info(f"Poll finished for {self.poll_id}")
         elif new: # since we handled the thingamajig for !new
             vote.choice = choice
             await vote.save()
+            logger.info(f"Creating new vote by {user} for {choice} on poll {self.poll_id} with vote id {vote.vote_id}")
         
         return True
     
