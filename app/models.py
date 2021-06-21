@@ -56,6 +56,9 @@ class TelegramUser(Model):
         else:
             return f"<a href=tg://user?id={self.user_id}>{self.first_name}</a>"
 
+    def __str__(self):
+        return self.__repr__()
+
     def __repr__(self):
         attrs: Dict[str, Union[str, int]] = {"user_id": self.user_id}
         if self.username:
@@ -115,6 +118,9 @@ class TelegramChat(Model):
         self.last_update = datetime.utcnow()
 
         await self.save()
+
+    def __str__(self):
+        return self.__repr__()
 
     def __repr__(self):
         attrs: Dict[str, Union[str, int]] = {"chat_id": self.chat_id}
