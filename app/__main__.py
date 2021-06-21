@@ -25,7 +25,7 @@ async def init_db():
 			modules.append(f)
 
 	# initialize modules n shit
-	tortoise_models = ['app.models']
+	tortoise_models = ['app.models', 'aerich.models']
 	for module in modules:
 		logger.info(f'loading app.{module}')
 		try:
