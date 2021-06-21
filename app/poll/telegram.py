@@ -97,12 +97,7 @@ async def build_bob_message(poll: Poll, ended: bool, counts: Dict[VoteChoice, in
 
 
 async def bob_vote(poll: Poll, user: TelegramUser, choice: VoteChoice) -> Dict[str, Union[str, List[Button]]]:
-    try:
-        changed: bool = await poll.vote(user, choice)
-    except PollLimitReached:
-        return {
-            "message": f"Too many ban attempts in the past {pretty_timedelta(POLL__LIMIT_DURATION)}. Please contact an admin instead."
-        }
+    changed: bool = await poll.vote(user, choice)
     
     counts: Dict[VoteChoice, int] = await poll.get_vote_stats()
 
@@ -211,39 +206,43 @@ async def handler_bob(event: NewMessage):
 
     already_exists: bool
     poll: Poll
-    already_exists, poll = await Poll.get_poll(chat=chat, target=target, source=from_user, msg_id=target_msg.id, force=force)
-    if already_exists:
-        if poll.poll_msg_id is None:
-            logger.error("poll_msg_id is None, sleeping 1s. hopefully it'll be ready by then")
-            asyncio.sleep(1)
-        if poll.poll_msg_id is None:
-            logger.error("still not ready, oh well...")
-            await event.reply(f"There's already a vote in progress!")
-            return
-        else:
-            msg: Optional[Message] = None
-            async for m in client.iter_messages(entity=chat_ent, ids=poll.poll_msg_id):
-                msg = m
-                break # lol
-
-            if msg is not None:
-                await event.reply(f'Please vote <a href="https://t.me/c/{str(chat_id)[4:]}/{poll.poll_msg_id}">here</a> instead.')
+    try:
+        already_exists, poll = await Poll.get_poll(chat=chat, target=target, source=from_user, msg_id=target_msg.id, force=force)
+        if already_exists:
+            if poll.poll_msg_id is None:
+                logger.error("poll_msg_id is None, sleeping 1s. hopefully it'll be ready by then")
+                asyncio.sleep(1)
+            if poll.poll_msg_id is None:
+                logger.error("still not ready, oh well...")
+                await event.reply(f"There's already a vote in progress!")
                 return
             else:
-                logger.warning("Our old poll message got deleted for some reason!")
-                poll.ended = True
-                await poll.save()
-                _, poll = await Poll.get_poll(chat=chat, target=target, source=from_user, msg_id=target_msg.id, force=force)
-            
+                msg: Optional[Message] = None
+                async for m in client.iter_messages(entity=chat_ent, ids=poll.poll_msg_id):
+                    msg = m
+                    break # lol
 
-    msg_dict: Dict[str, Union[str, List[Button]]] = await bob_vote(poll, from_user, VoteChoice.YES)
+                if msg is not None:
+                    await event.reply(f'Please vote <a href="https://t.me/c/{str(chat_id)[4:]}/{poll.poll_msg_id}">here</a> instead.')
+                    return
+                else:
+                    logger.warning("Our old poll message got deleted for some reason!")
+                    poll.ended = True
+                    await poll.save()
+                    _, poll = await Poll.get_poll(chat=chat, target=target, source=from_user, msg_id=target_msg.id, force=True) # ahh heck, whatever
 
-    msg: Message = await target_msg.reply(
-        msg_dict['message'],
-        buttons = msg_dict.get('buttons')
-    )
 
-    await poll.set_poll_msg_id(msg.id)
+        msg_dict: Dict[str, Union[str, List[Button]]] = await bob_vote(poll, from_user, VoteChoice.YES)
+
+        msg: Message = await target_msg.reply(
+            msg_dict['message'],
+            buttons = msg_dict.get('buttons')
+        )
+
+        await poll.set_poll_msg_id(msg.id)
+    except PollLimitReached:
+        await event.reply(f"Too many ban attempts in the past {pretty_timedelta(POLL__LIMIT_DURATION)}. Please contact an admin instead.")
+
 
 regex_bob_callback = re.compile("^poll_vote (?P<poll_id>[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}) (?P<choice>[a-z_]+)$", re.I)
 @events.register(events.CallbackQuery(data=re.compile(b'poll_vote ')))
