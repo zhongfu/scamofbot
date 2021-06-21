@@ -13,7 +13,7 @@ from ..models import TelegramUser, TelegramChat
 from telethon import events, Button, utils
 from telethon.tl.types import Channel, Message, PeerChannel, PeerChat, PeerUser, User, ChannelParticipantCreator, ChannelParticipantAdmin
 from telethon.tl.functions.channels import GetParticipantRequest
-from telethon.errors.rpcerrorlist import MessageDeleteForbiddenError, ChatAdminRequiredError
+from telethon.errors.rpcerrorlist import MessageDeleteForbiddenError, ChatAdminRequiredError, UserNotParticipantError
 
 import re
 from datetime import timedelta
@@ -25,10 +25,14 @@ logger = logging.getLogger(__name__)
 channel and user can be any InputChannel or InputUser (e.g. Channel, PeerChannel, etc)
 """
 async def is_admin(channel, user):
-    participant = await client(GetParticipantRequest(channel=channel, participant=user))
-    isadmin = (type(participant.participant) == ChannelParticipantAdmin)
-    iscreator = (type(participant.participant) == ChannelParticipantCreator)
-    return isadmin or iscreator
+    try:
+        participant = await client(GetParticipantRequest(channel=channel, participant=user))
+        isadmin = (type(participant.participant) == ChannelParticipantAdmin)
+        iscreator = (type(participant.participant) == ChannelParticipantCreator)
+        return isadmin or iscreator
+    except UserNotParticipantError:
+        # then this dude's definitely not an admin or the creator of the chat
+        return false
 
 
 """
