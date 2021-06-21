@@ -184,8 +184,9 @@ class Poll(Model):
     
     async def get_voters(self, choice: VoteChoice) -> List[TelegramUser]:
         user_ids: List[int] = await Vote.filter(poll=self, choice=choice).order_by('timestamp').values_list('user__user_id', flat=True)
-        users: List[TelegramUser] = [user async for user in TelegramUser.filter(user_id__in=user_ids)]
-        assert len(user_ids) == len(users), "user_ids len doesn't match users len"
+        users_dict: Dict[int, TelegramUser] = {user.user_id: user async for user in TelegramUser.filter(user_id__in=user_ids)}
+        assert len(user_ids) == len(users_dict), "user_ids len doesn't match users_dict len"
+        users: List[TelegramUser] = [users_dict[user_id] for user_id in user_ids]
         return users
             
     
