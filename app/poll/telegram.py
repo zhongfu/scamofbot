@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Union
 
 from tortoise.exceptions import DoesNotExist
 from app.poll.models import Poll, PollLimitReached, VoteChoice
+from app.util import Timer
 from telethon.events.newmessage import NewMessage
 from telethon.hints import Entity
 from config import POLL__LIMIT_DURATION, TG_BOT_ID, TG_BOT_USERNAME, POLL__CHANNELS, POLL__THRESHOLD
@@ -178,7 +179,8 @@ async def handler_bob(event: NewMessage):
     chat_id: int = utils.get_peer_id(chat_ent)
     
     if not event.is_reply:
-        await event.reply("Try replying to a message with /bob instead!")
+        msg = await event.reply("Try replying to a message with /bob instead!")
+        Timer(30, msg.delete)
         return
     
     chat: TelegramChat = await TelegramChat.get_chat(client, chat_id)
