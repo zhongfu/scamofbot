@@ -60,6 +60,9 @@ chat_id can be a chat id or a chat public link name without `@`
 does it have to include the id prefix as well? I don't know lol
 """
 async def get_channel(chat_id, force_refresh=False) -> Channel: # throws ValueError if not found, or not channel
+    if isinstance(chat_id, str):
+        # remove @ if required, I guess
+        chat_id = chat_id.lstrip('@')
     # one of these will throw ValueError if not found
     input_entity: Union[TypeInputPeer, int, str] = await client.get_input_entity(chat_id) if not force_refresh else chat_id
     entity: Entity = await client.get_entity(input_entity)
@@ -75,6 +78,9 @@ user_id can be a user id or username without `@`
 does it have to include the id prefix as well? I don't know lol
 """
 async def get_user(user_id, force_refresh=False) -> User: # throws ValueError if not found, or not user
+    if isinstance(user_id, str):
+        # remove @ if required, I guess
+        user_id = user_id.lstrip('@')
     # one of these will throw ValueError if not found
     input_entity: Union[TypeInputPeer, int, str] = await client.get_input_entity(user_id) if not force_refresh else user_id
     entity: Entity = await client.get_entity(input_entity)
