@@ -2,19 +2,21 @@ import math
 import asyncio
 from typing import Dict, List, Optional, Union
 
+from cache import AsyncTTL
 from tortoise.exceptions import DoesNotExist
+
 from app.poll.models import Poll, PollLimitReached, VoteChoice
 from app.util import Timer
-from telethon.events.newmessage import NewMessage
-from telethon.hints import Entity
 from config import POLL__LIMIT_DURATION, TG_BOT_ID, TG_BOT_USERNAME, POLL__CHANNELS, POLL__THRESHOLD
 from ..telegram import client
 from ..models import TelegramUser, TelegramChat
 
 from telethon import events, Button, utils
-from telethon.tl.types import Channel, Message, PeerChannel, PeerChat, PeerUser, User, ChannelParticipantCreator, ChannelParticipantAdmin
+from telethon.tl.types import Channel, Message, PeerChannel, PeerChat, PeerUser, User, ChannelParticipantCreator, ChannelParticipantAdmin, TypeInputPeer
 from telethon.tl.functions.channels import GetParticipantRequest
 from telethon.errors.rpcerrorlist import MessageDeleteForbiddenError, ChatAdminRequiredError, UserNotParticipantError
+from telethon.events.newmessage import NewMessage
+from telethon.hints import Entity
 
 import re
 from datetime import timedelta
@@ -23,25 +25,44 @@ import logging
 logger = logging.getLogger(__name__)
 
 """
+returns ChannelParticipant if user is in chat, else None
+"""
+@AsyncTTL(time_to_live=180, maxsize=64)
+async def get_participant(channel, user):
+    try:
+        participant = await client(GetParticipantRequest(channel=channel, participant=user))
+        return participant
+    except UserNotParticipantError:
+        return None
+
+"""
+returns True if user is in chat, else False
+"""
+async def is_participant(channel, user):
+    return (await get_participant(channel, user)) is not None
+
+"""
 channel and user can be any InputChannel or InputUser (e.g. Channel, PeerChannel, etc)
 """
 async def is_admin(channel, user):
-    try:
-        participant = await client(GetParticipantRequest(channel=channel, participant=user))
-        isadmin = (type(participant.participant) == ChannelParticipantAdmin)
-        iscreator = (type(participant.participant) == ChannelParticipantCreator)
-        return isadmin or iscreator
-    except UserNotParticipantError:
+    participant = await get_participant(channel, user)
+    if not participant:
         # then this dude's definitely not an admin or the creator of the chat
         return False
 
+    isadmin = (type(participant.participant) == ChannelParticipantAdmin)
+    iscreator = (type(participant.participant) == ChannelParticipantCreator)
+    return isadmin or iscreator
+
 
 """
-chat_id has to be, well, a chat_id
+chat_id can be a chat id or a chat public link name without `@`
 does it have to include the id prefix as well? I don't know lol
 """
-async def get_channel(chat_id) -> Channel: # throws ValueError if not found, or not channel
-    entity: Entity = await client.get_entity(chat_id) # throws ValueError if not found
+async def get_channel(chat_id, force_refresh=False) -> Channel: # throws ValueError if not found, or not channel
+    # one of these will throw ValueError if not found
+    input_entity: Union[TypeInputPeer, int, str] = await client.get_input_entity(chat_id) if not force_refresh else chat_id
+    entity: Entity = await client.get_entity(input_entity)
 
     if isinstance(entity, Channel):
         return entity
@@ -50,11 +71,13 @@ async def get_channel(chat_id) -> Channel: # throws ValueError if not found, or 
 
 
 """
-user_id has to be, well, a user_id
+user_id can be a user id or username without `@`
 does it have to include the id prefix as well? I don't know lol
 """
-async def get_user(user_id) -> User: # throws ValueError if not found, or not user
-    entity: Entity = await client.get_entity(user_id) # throws ValueError if not found
+async def get_user(user_id, force_refresh=False) -> User: # throws ValueError if not found, or not user
+    # one of these will throw ValueError if not found
+    input_entity: Union[TypeInputPeer, int, str] = await client.get_input_entity(user_id) if not force_refresh else user_id
+    entity: Entity = await client.get_entity(input_entity)
 
     if isinstance(entity, User):
         return entity
@@ -64,7 +87,7 @@ async def get_user(user_id) -> User: # throws ValueError if not found, or not us
 
 async def build_bob_message(poll: Poll, ended: bool, counts: Dict[VoteChoice, int], winner: VoteChoice = None) -> Dict[str, Union[str, List[Button]]]:
     assert not ended or winner is not None, "Poll ended, but no winner passed to build_bob_message!"
-    
+
     if not ended:
         message_lines = [
             f"{poll.source.get_link()} would like to kick {poll.target.get_link()}.",
@@ -99,7 +122,7 @@ async def build_bob_message(poll: Poll, ended: bool, counts: Dict[VoteChoice, in
 
 async def bob_vote(poll: Poll, user: TelegramUser, choice: VoteChoice) -> Dict[str, Union[str, List[Button]]]:
     changed: bool = await poll.vote(user, choice)
-    
+
     counts: Dict[VoteChoice, int] = await poll.get_vote_stats()
 
     ended = poll.ended
