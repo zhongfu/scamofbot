@@ -39,7 +39,7 @@ class Poll(Model):
     target: TelegramUser = fields.ForeignKeyField("models.TelegramUser", null=False, on_delete=fields.RESTRICT, related_name=False, description="target of the poll")
     ended: bool = fields.BooleanField(null=False, default=False, description="has the poll ended?")
     forced: bool = fields.BooleanField(null=False, default=False, description="was this poll forced, e.g. started by an admin?")
-    msg_id: int = fields.IntField(null=False, description="message ID that bob was called on")
+    msg_id: int = fields.IntField(null=True, description="message ID that bob was called on")
     poll_msg_id: int = fields.IntField(null=True, description="msg id of poll message")
 
     @classmethod
@@ -66,7 +66,7 @@ class Poll(Model):
     throws PollLimitReached
     """
     @classmethod
-    async def get_poll(cls, chat: TelegramChat, target: TelegramUser, source: TelegramUser, msg_id: int, poll_type: PollType = PollType.BAN, force: bool = False): # returns (already_exists: bool, Poll)
+    async def get_poll(cls, chat: TelegramChat, target: TelegramUser, source: TelegramUser, msg_id: int = None, poll_type: PollType = PollType.BAN, force: bool = False): # returns (already_exists: bool, Poll)
         poll: Optional[Poll] = None
         try:
             poll = await Poll.get(chat=chat, target=target, poll_type=poll_type, ended=False)
@@ -205,9 +205,11 @@ class Poll(Model):
             "chat": repr(self.chat),
             "target": repr(self.target),
             "ended": self.ended,
-            "forced": self.forced,
-            "msg_id": self.msg_id
+            "forced": self.forced
         }
+
+        if self.msg_id:
+            attrs["msg_id"] = self.msg_id
 
         return f"<Poll({', '.join(f'{k}={v}' for k,v in attrs.items())})"
 

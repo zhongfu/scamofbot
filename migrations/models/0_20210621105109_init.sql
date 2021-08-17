@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS "poll" (
     "poll_type" SMALLINT NOT NULL  DEFAULT 1 /* type of poll */,
     "ended" INT NOT NULL  DEFAULT 0 /* has the poll ended? */,
     "forced" INT NOT NULL  DEFAULT 0 /* was this poll forced, e.g. started by an admin? */,
-    "msg_id" INT NOT NULL  /* message ID that bob was called on */,
+    "msg_id" INT   /* message ID that bob was called on */,
     "poll_msg_id" INT   /* msg id of poll message */,
     "chat_id" INT NOT NULL REFERENCES "telegramchat" ("chat_id") ON DELETE RESTRICT /* chat in which the poll was started */,
     "source_id" INT NOT NULL REFERENCES "telegramuser" ("user_id") ON DELETE RESTRICT /* user who initiated the poll */,
