@@ -168,7 +168,7 @@ def pretty_timedelta(td: timedelta) -> str:
     return ', '.join(parts)
 
 
-regex_bob = re.compile(fr'^/bob(?:@{TG_BOT_USERNAME})?$', re.I)
+regex_bob = re.compile(fr'^/(bob|ngmi)(?:@{TG_BOT_USERNAME})?$', re.I)
 @events.register(events.NewMessage(incoming=True, pattern=regex_bob, chats=POLL__CHANNELS))
 async def handler_bob(event: NewMessage):
     chat_ent: PeerChannel = event.to_id
