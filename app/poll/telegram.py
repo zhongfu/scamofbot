@@ -30,13 +30,13 @@ participant_cache = cachetools.TTLCache(maxsize=64, ttl=3*60)
 returns ChannelParticipant if user is in chat, else None
 """
 async def get_participant(channel, user):
-    tup = (channel.channel_id, user.user_id)
+    tup = (getattr(channel, 'chat_id', None) or getattr(channel, 'channel_id', None), user.user_id)
     res = participant_cache.get(tup)
     if res:
         return res
     else:
         try:
-            participant = await client(GetParticipantRequest(channel=channel, participant=PeerUser(user)))
+            participant = await client(GetParticipantRequest(channel=channel, participant=user))
             res = participant
         except UserNotParticipantError:
             res = None
@@ -380,15 +380,21 @@ async def handler_bob_callback(event):
         logger.error(f"bob_callback data got a valid poll_id, but there's no Poll corresponding to this id!")
         await bot_msg.edit(bot_msg.text + '\n\n' + f"Oops, something went wrong!", buttons=None)
         return
-    
-    user: TelegramUser = await TelegramUser.get_user(client, user_id=event.sender_id)
-    msg_dict: Dict[str, Union[str, List[Button]]] = await bob_vote(poll, user, choice)
 
-    if not msg_dict.get('unchanged', False):
-        await bot_msg.edit(
-            msg_dict['message'],
-            buttons = msg_dict.get('buttons')
-        )
-        await event.answer(f"You've voted for {choice_str.capitalize()}!")
+    sender = await event.get_input_sender()
+    user: TelegramUser = await TelegramUser.get_user(client, user_id=event.sender_id)
+
+    if await is_participant(PeerChannel(poll.chat.chat_id), sender):
+        msg_dict: Dict[str, Union[str, List[Button]]] = await bob_vote(poll, user, choice)
+
+        if not msg_dict.get('unchanged', False):
+            await bot_msg.edit(
+                msg_dict['message'],
+                buttons = msg_dict.get('buttons')
+            )
+            await event.answer(f"You've voted for {choice_str.capitalize()}!")
+        else:
+            await event.answer("You can't vote for the same choice multiple times.")
     else:
-        await event.answer("You can't vote for the same choice multiple times.")
+        logger.warning(f"User {user} is trying to vote in poll {poll} despite not being in the channel!")
+        await event.answer()
