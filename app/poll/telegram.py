@@ -2,7 +2,7 @@ import math
 import asyncio
 from typing import Dict, List, Optional, Union
 
-from cache import AsyncTTL
+import cachetools
 from tortoise.exceptions import DoesNotExist
 
 from app.poll.models import Poll, PollLimitReached, VoteChoice
@@ -24,16 +24,25 @@ from datetime import timedelta
 import logging
 logger = logging.getLogger(__name__)
 
+participant_cache = cachetools.TTLCache(maxsize=64, ttl=3*60)
+
 """
 returns ChannelParticipant if user is in chat, else None
 """
-@AsyncTTL(time_to_live=180, maxsize=64)
 async def get_participant(channel, user):
-    try:
-        participant = await client(GetParticipantRequest(channel=channel, participant=user))
-        return participant
-    except UserNotParticipantError:
-        return None
+    tup = (channel.channel_id, user.user_id)
+    res = participant_cache.get(tup)
+    if res:
+        return res
+    else:
+        try:
+            participant = await client(GetParticipantRequest(channel=channel, participant=PeerUser(user)))
+            res = participant
+        except UserNotParticipantError:
+            res = None
+
+        participant_cache[tup] = res
+        return res
 
 """
 returns True if user is in chat, else False

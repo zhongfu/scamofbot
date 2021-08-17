@@ -1,4 +1,4 @@
 telethon==1.23.*
 tortoise-orm==0.17.*
 aerich==0.5.*
-async-cache==1.1.*
+cachetools==4.2.*
