@@ -12,7 +12,7 @@ from ..telegram import client
 from ..models import TelegramUser, TelegramChat
 
 from telethon import events, Button, utils
-from telethon.tl.types import Channel, Message, PeerChannel, PeerChat, PeerUser, User, ChannelParticipantCreator, ChannelParticipantAdmin, TypeInputPeer
+from telethon.tl.types import Channel, Message, PeerChannel, PeerChat, PeerUser, User, ChannelParticipantCreator, ChannelParticipantAdmin, TypeInputPeer, TypeMessageEntity, MessageEntityMention, MessageEntityMentionName
 from telethon.tl.functions.channels import GetParticipantRequest
 from telethon.errors.rpcerrorlist import MessageDeleteForbiddenError, ChatAdminRequiredError, UserNotParticipantError
 from telethon.events.newmessage import NewMessage
@@ -197,7 +197,7 @@ def pretty_timedelta(td: timedelta) -> str:
     return ', '.join(parts)
 
 
-regex_bob = re.compile(fr'^/(bob|ngmi)(?:@{TG_BOT_USERNAME})?$', re.I)
+regex_bob = re.compile(fr'^/(?P<cmd>bob|ngmi)(?:@{TG_BOT_USERNAME})?( *| +(?P<target>.+))$', re.I)
 @events.register(events.NewMessage(incoming=True, pattern=regex_bob, chats=POLL__CHANNELS))
 async def handler_bob(event: NewMessage):
     chat_ent: PeerChannel = event.to_id
@@ -205,21 +205,57 @@ async def handler_bob(event: NewMessage):
         logger.error(f"Got handler_bob event from a {type(chat_ent)} instead of a PeerChannel!")
         return
 
-    chat_id: int = utils.get_peer_id(chat_ent)
-    
-    if not event.is_reply:
-        msg = await event.reply("Try replying to a message with /bob instead!")
+    cmd: str = event.match.group('cmd')
+
+    bob_arg: Union[str, int] = event.match.group('target')
+    entities: Optional[List[TypeMessageEntity]] = None
+    target_msg: Optional[Message] = None
+    target_ent: Optional[PeerUser] = None
+
+    if bob_arg:
+        entities = list(filter(lambda tup: isinstance(tup[0], (MessageEntityMention, MessageEntityMentionName)), event.get_entities.text()))
+
+        if len(entities) == 0: # no entities?
+            if event.is_reply:
+                msg: Message = await event.reply(f"It doesn't seem like you've mentioned a valid user. Try again, or reply to a message with just /{cmd} instead.")
+            else:
+                msg: Message = await event.reply("It doesn't seem like you've mentioned a valid user. Try again.")
+
+            Timer(30, msg.delete)
+            return
+        else: # take only the first entity, i guess
+            ent: TypeMessageEntity
+            txt: str
+            ent, txt = entities[0]
+            if isinstance(ent, MessageEntityMention): # @username
+                try:
+                    target_ent = await get_user(txt)
+                except ValueError:
+                    msg: Message = await event.reply("Hmm, I couldn't find anyone with that username!")
+                    Timer(30, msg.delete)
+                    return
+            elif isinstance(ent, MessageEntityMentionName): # no username
+                try:
+                    target_ent = await get_user(ent.user_id)
+                except ValueError:
+                    msg: Message = await event.reply("Sorry, I couldn't find that user.")
+                    Timer(30, msg.delete)
+                    return
+    elif event.is_reply:
+        target_msg = await event.get_reply_message()
+        target_ent = target_msg.from_id
+    else: # no bob_arg, and not a reply
+        msg = await event.reply(f"Try replying to a message with /{cmd} instead!")
         Timer(30, msg.delete)
         return
-    
-    chat: TelegramChat = await TelegramChat.get_chat(client, chat_id)
-    target_msg: Message = await event.get_reply_message()
 
-    if not isinstance(target_msg.from_id, PeerUser) or target_msg.from_id.user_id == TG_BOT_ID or await is_admin(chat_ent, target_msg.from_id):
+    if not isinstance(target_ent, PeerUser) or target_ent.user_id == TG_BOT_ID or await is_admin(chat_ent, target_ent):
         await event.reply("I'm sorry Dave, I can't let you do that.")
         return
-    
-    target_ent: PeerUser = target_msg.from_id
+
+    chat_id: int = utils.get_peer_id(chat_ent)
+    chat: TelegramChat = await TelegramChat.get_chat(client, chat_id)
+
     target: TelegramUser = await TelegramUser.get_user(client, target_ent.user_id)
 
     # at this point, we've got a valid user to bob
@@ -232,10 +268,12 @@ async def handler_bob(event: NewMessage):
 
     force: bool = isinstance(event.from_id, PeerUser) and await is_admin(chat_ent, event.from_id)
 
+    target_msg_id: Optional[int] = target_msg.id if target_msg else None
+
     already_exists: bool
     poll: Poll
     try:
-        already_exists, poll = await Poll.get_poll(chat=chat, target=target, source=from_user, msg_id=target_msg.id, force=force)
+        already_exists, poll = await Poll.get_poll(chat=chat, target=target, source=from_user, msg_id=target_msg_id, force=force)
         if already_exists:
             if poll.poll_msg_id is None:
                 logger.error("poll_msg_id is None, sleeping 1s. hopefully it'll be ready by then")
@@ -257,7 +295,7 @@ async def handler_bob(event: NewMessage):
                     logger.warning("Our old poll message got deleted for some reason!")
                     poll.ended = True
                     await poll.save()
-                    _, poll = await Poll.get_poll(chat=chat, target=target, source=from_user, msg_id=target_msg.id, force=True) # ahh heck, whatever
+                    _, poll = await Poll.get_poll(chat=chat, target=target, source=from_user, msg_id=target_msg_id, force=True) # ahh heck, whatever
 
 
         msg_dict: Dict[str, Union[str, List[Button]]] = await bob_vote(poll, from_user, VoteChoice.YES)
