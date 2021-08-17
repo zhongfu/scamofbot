@@ -12,7 +12,7 @@ from ..telegram import client
 from ..models import TelegramUser, TelegramChat
 
 from telethon import events, Button, utils
-from telethon.tl.types import Channel, Message, PeerChannel, PeerChat, PeerUser, User, ChannelParticipantCreator, ChannelParticipantAdmin, TypeInputPeer, TypeMessageEntity, MessageEntityMention, MessageEntityMentionName
+from telethon.tl.types import Channel, Message, PeerChannel, PeerChat, PeerUser, User, InputPeerUser, InputPeerChannel, ChannelParticipantCreator, ChannelParticipantAdmin, TypeInputPeer, TypeMessageEntity, MessageEntityMention, MessageEntityMentionName
 from telethon.tl.functions.channels import GetParticipantRequest
 from telethon.errors.rpcerrorlist import MessageDeleteForbiddenError, ChatAdminRequiredError, UserNotParticipantError
 from telethon.events.newmessage import NewMessage
@@ -59,36 +59,60 @@ async def is_admin(channel, user):
 chat_id can be a chat id or a chat public link name without `@`
 does it have to include the id prefix as well? I don't know lol
 """
-async def get_channel(chat_id, force_refresh=False) -> Channel: # throws ValueError if not found, or not channel
+async def get_channel(chat_id, get_peer=False, force_refresh=False) -> Union[PeerChannel, Channel]: # throws ValueError if not found, or not channel
     if isinstance(chat_id, str):
         # remove @ if required, I guess
         chat_id = chat_id.lstrip('@')
-    # one of these will throw ValueError if not found
-    input_entity: Union[TypeInputPeer, int, str] = await client.get_input_entity(chat_id) if not force_refresh else chat_id
-    entity: Entity = await client.get_entity(input_entity)
 
-    if isinstance(entity, Channel):
-        return entity
+    if get_peer and force_refresh:
+        raise ValueError("Cannot use get_peer and force_refresh together!")
+
+    if get_peer:
+        input_entity: TypeInputPeer = await client.get_input_entity(chat_id)
+
+        if isinstance(input_entity, InputPeerChannel):
+            return PeerChannel(input_entity.channel_id)
+        else:
+            raise ValueError(f"Got a {type(entity)} instead of an InputPeerChannel!")
     else:
-        raise ValueError(f"Got a {type(entity)} instead of a Channel!")
+        # one of these will throw ValueError if not found
+        input_entity: Union[TypeInputPeer, int, str] = await client.get_input_entity(chat_id) if not force_refresh else chat_id
+        entity: Entity = await client.get_entity(input_entity)
+
+        if isinstance(entity, Channel):
+            return entity
+        else:
+            raise ValueError(f"Got a {type(entity)} instead of a Channel!")
 
 
 """
 user_id can be a user id or username without `@`
 does it have to include the id prefix as well? I don't know lol
 """
-async def get_user(user_id, force_refresh=False) -> User: # throws ValueError if not found, or not user
+async def get_user(user_id, get_peer=False, force_refresh=False) -> Union[PeerUser, User]: # throws ValueError if not found, or not user
     if isinstance(user_id, str):
         # remove @ if required, I guess
         user_id = user_id.lstrip('@')
-    # one of these will throw ValueError if not found
-    input_entity: Union[TypeInputPeer, int, str] = await client.get_input_entity(user_id) if not force_refresh else user_id
-    entity: Entity = await client.get_entity(input_entity)
 
-    if isinstance(entity, User):
-        return entity
+    if get_peer and force_refresh:
+        raise ValueError("Cannot use get_peer and force_refresh together!")
+
+    if get_peer:
+        input_entity: TypeInputPeer = await client.get_input_entity(user_id)
+
+        if isinstance(input_entity, InputPeerUser):
+            return PeerUser(input_entity.user_id)
+        else:
+            raise ValueError(f"Got a {type(entity)} instead of an InputPeerUser!")
     else:
-        raise ValueError(f"Got a {type(entity)} instead of a User!")
+        # one of these will throw ValueError if not found
+        input_entity: Union[TypeInputPeer, int, str] = await client.get_input_entity(user_id) if not force_refresh else user_id
+        entity: Entity = await client.get_entity(input_entity)
+
+        if isinstance(entity, User):
+            return entity
+        else:
+            raise ValueError(f"Got a {type(entity)} instead of a User!")
 
 
 async def build_bob_message(poll: Poll, ended: bool, counts: Dict[VoteChoice, int], winner: VoteChoice = None) -> Dict[str, Union[str, List[Button]]]:
@@ -229,14 +253,14 @@ async def handler_bob(event: NewMessage):
             ent, txt = entities[0]
             if isinstance(ent, MessageEntityMention): # @username
                 try:
-                    target_ent = await get_user(txt)
+                    target_ent = await get_user(txt, get_peer=True)
                 except ValueError:
                     msg: Message = await event.reply("Hmm, I couldn't find anyone with that username!")
                     Timer(30, msg.delete)
                     return
             elif isinstance(ent, MessageEntityMentionName): # no username
                 try:
-                    target_ent = await get_user(ent.user_id)
+                    target_ent = await get_user(ent.user_id, get_peer=True)
                 except ValueError:
                     msg: Message = await event.reply("Sorry, I couldn't find that user.")
                     Timer(30, msg.delete)
@@ -256,17 +280,15 @@ async def handler_bob(event: NewMessage):
         await event.reply("I'm sorry Dave, I can't let you do that.")
         return
 
-    chat_id: int = utils.get_peer_id(chat_ent)
-    chat: TelegramChat = await TelegramChat.get_chat(client, chat_id)
-
-    target: TelegramUser = await TelegramUser.get_user(client, target_ent.user_id)
-
     # at this point, we've got a valid user to bob
     # and it's not an admin either
     # now we do other checks: is the poll limit exceeded, is the sender an admin?
     # actually that happens in models.py lol
 
-    from_user_ent: PeerUser = event.from_id
+    chat_id: int = utils.get_peer_id(chat_ent)
+    chat: TelegramChat = await TelegramChat.get_chat(client, chat_id)
+
+    target: TelegramUser = await TelegramUser.get_user(client, target_ent.user_id)
     from_user: TelegramUser = await TelegramUser.get_user(client, from_user_ent.user_id)
 
     force: bool = isinstance(event.from_id, PeerUser) and await is_admin(chat_ent, event.from_id)
