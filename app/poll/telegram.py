@@ -82,7 +82,7 @@ async def get_channel(chat_id, get_peer=False, force_refresh=False) -> Union[Pee
         if isinstance(input_entity, InputPeerChannel):
             return PeerChannel(input_entity.channel_id)
         else:
-            raise ValueError(f"Got a {type(entity)} instead of an InputPeerChannel!")
+            raise ValueError(f"Got a {type(input_entity)} instead of an InputPeerChannel!")
     else:
         # one of these will throw ValueError if not found
         input_entity: Union[TypeInputPeer, int, str] = await client.get_input_entity(chat_id) if not force_refresh else chat_id
@@ -112,7 +112,7 @@ async def get_user(user_id, get_peer=False, force_refresh=False) -> Union[PeerUs
         if isinstance(input_entity, InputPeerUser):
             return PeerUser(input_entity.user_id)
         else:
-            raise ValueError(f"Got a {type(entity)} instead of an InputPeerUser!")
+            raise ValueError(f"Got a {type(input_entity)} instead of an InputPeerUser!")
     else:
         # one of these will throw ValueError if not found
         input_entity: Union[TypeInputPeer, int, str] = await client.get_input_entity(user_id) if not force_refresh else user_id
@@ -264,7 +264,7 @@ async def handler_bob(event: NewMessage):
                 try:
                     target_ent = await get_user(txt, get_peer=True)
                 except ValueError:
-                    msg: Message = await event.reply("Hmm, I couldn't find anyone with that username!")
+                    msg: Message = await event.reply("Hmm, I couldn't find any user with that username!")
                     Timer(30, msg.delete)
                     return
             elif isinstance(ent, MessageEntityMentionName): # no username
