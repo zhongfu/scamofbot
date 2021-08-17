@@ -249,7 +249,10 @@ async def handler_bob(event: NewMessage):
         Timer(30, msg.delete)
         return
 
+    from_user_ent: PeerUser = event.from_id
+
     if not isinstance(target_ent, PeerUser) or target_ent.user_id == TG_BOT_ID or await is_admin(chat_ent, target_ent):
+        logger.warning(f"User {from_user_ent} tried to bob an admin (?) {target_ent} in {chat_ent}!")
         await event.reply("I'm sorry Dave, I can't let you do that.")
         return
 
