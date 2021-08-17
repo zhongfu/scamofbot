@@ -213,7 +213,7 @@ async def handler_bob(event: NewMessage):
     target_ent: Optional[PeerUser] = None
 
     if bob_arg:
-        entities = list(filter(lambda tup: isinstance(tup[0], (MessageEntityMention, MessageEntityMentionName)), event.get_entities.text()))
+        entities = list(filter(lambda tup: isinstance(tup[0], (MessageEntityMention, MessageEntityMentionName)), event.get_entities_text()))
 
         if len(entities) == 0: # no entities?
             if event.is_reply:
