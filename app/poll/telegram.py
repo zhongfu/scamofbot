@@ -295,42 +295,48 @@ async def handler_bob(event: NewMessage):
 
     target_msg_id: Optional[int] = target_msg.id if target_msg else None
 
+    reply_msg: Message = target_msg or event
+
     already_exists: bool
     poll: Poll
     try:
         already_exists, poll = await Poll.get_poll(chat=chat, target=target, source=from_user, msg_id=target_msg_id, force=force)
         if already_exists:
+            msg: Optional[Message] = None
+
             if poll.poll_msg_id is None:
                 logger.error("poll_msg_id is None, sleeping 1s. hopefully it'll be ready by then")
-                asyncio.sleep(1)
+                await asyncio.sleep(1)
+
             if poll.poll_msg_id is None:
                 logger.error("still not ready, oh well...")
-                await event.reply(f"There's already a vote in progress!")
-                return
             else:
-                msg: Optional[Message] = None
                 async for m in client.iter_messages(entity=chat_ent, ids=poll.poll_msg_id):
                     msg = m
                     break # lol
 
-                if msg is not None:
-                    await event.reply(f'Please vote <a href="https://t.me/c/{str(chat_id)[4:]}/{poll.poll_msg_id}">here</a> instead.')
-                    return
-                else:
-                    logger.warning("Our old poll message got deleted for some reason!")
-                    poll.ended = True
-                    await poll.save()
-                    _, poll = await Poll.get_poll(chat=chat, target=target, source=from_user, msg_id=target_msg_id, force=True) # ahh heck, whatever
+            if msg is not None:
+                await event.reply(f'Please vote <a href="https://t.me/c/{str(chat_id)[4:]}/{poll.poll_msg_id}">here</a> instead.')
+                return
+            else:
+                logger.warning("Our old poll message got deleted for some reason!")
+                await poll.force_end()
+                _, poll = await Poll.get_poll(chat=chat, target=target, source=from_user, msg_id=target_msg_id, force=True) # ahh heck, whatever
 
 
         msg_dict: Dict[str, Union[str, List[Button]]] = await bob_vote(poll, from_user, VoteChoice.YES)
 
-        msg: Message = await target_msg.reply(
-            msg_dict['message'],
-            buttons = msg_dict.get('buttons')
-        )
+        try:
+            msg: Message = await reply_msg.reply(
+                msg_dict['message'],
+                buttons = msg_dict.get('buttons')
+            )
 
-        await poll.set_poll_msg_id(msg.id)
+            await poll.set_poll_msg_id(msg.id)
+        except Exception:
+            logger.warning("Got error while trying to send message!")
+            await poll.delete()
+            return
     except PollLimitReached:
         await event.reply(f"Too many ban attempts in the past {pretty_timedelta(POLL__LIMIT_DURATION)}. Please contact an admin instead.")
 

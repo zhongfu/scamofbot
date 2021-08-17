@@ -123,6 +123,10 @@ class Poll(Model):
         self.poll_msg_id = poll_msg_id
         await self.save()
 
+    async def force_end(self):
+        self.ended = True
+        await self.save()
+
 
     """
     returns true if changed, false otherwise
