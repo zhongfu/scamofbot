@@ -318,7 +318,7 @@ regex_bob_callback = re.compile("^poll_vote (?P<poll_id>[a-f0-9]{8}-[a-f0-9]{4}-
 async def handler_bob_callback(event):
     bot_msg: Message = await event.get_message()
     data: str = event.data.decode('ascii')
-    match: re.Match = regex_bob_callback.pattern_match(data)
+    match: re.Match = regex_bob_callback.match(data)
 
     if not match:
         logger.error("bob_callback data doesn't match regex!")
