@@ -205,9 +205,9 @@ async def handler_bob(event: NewMessage):
         logger.error(f"Got handler_bob event from a {type(chat_ent)} instead of a PeerChannel!")
         return
 
-    cmd: str = event.match.group('cmd')
+    cmd: str = event.pattern_match.group('cmd')
 
-    bob_arg: Union[str, int] = event.match.group('target')
+    bob_arg: Union[str, int] = event.pattern_match.group('target')
     entities: Optional[List[TypeMessageEntity]] = None
     target_msg: Optional[Message] = None
     target_ent: Optional[PeerUser] = None
@@ -315,7 +315,7 @@ regex_bob_callback = re.compile("^poll_vote (?P<poll_id>[a-f0-9]{8}-[a-f0-9]{4}-
 async def handler_bob_callback(event):
     bot_msg: Message = await event.get_message()
     data: str = event.data.decode('ascii')
-    match: re.Match = regex_bob_callback.match(data)
+    match: re.Match = regex_bob_callback.pattern_match(data)
 
     if not match:
         logger.error("bob_callback data doesn't match regex!")
