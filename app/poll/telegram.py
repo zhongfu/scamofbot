@@ -290,7 +290,7 @@ async def handler_bob(event: NewMessage):
 
     if not isinstance(target_ent, PeerUser) or target_ent.user_id == TG_BOT_ID or await is_admin(chat_ent, target_ent):
         logger.warning(f"User {from_user} tried to bob an admin (?) {target_ent} in {chat}!")
-        await event.reply("I'm sorry Dave, I can't let you do that.")
+        await event.reply("I'm sorry Dave, I'm afraid I can't do that.")
         return
 
     # at this point, we've got a valid user to bob
