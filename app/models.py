@@ -52,7 +52,7 @@ class TelegramUser(Model):
     
     def get_link(self):
         if self.username:
-            return f"@{self.username}"
+            return f"<a href=tg://user?id={self.user_id}>@{self.username}</a>"
         else:
             return f"<a href=tg://user?id={self.user_id}>{self.first_name}</a>"
 
