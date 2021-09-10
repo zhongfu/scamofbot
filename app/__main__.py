@@ -52,8 +52,7 @@ async def init_db():
 		await Tortoise.init(
 			db_url=DATABASE_URI,
 			modules={"models": tortoise_models},
-			use_tz=True,
-			timezone="Asia/Singapore"
+			use_tz=True
 		)
 		await Tortoise.generate_schemas()
 	except Exception:
