@@ -173,9 +173,10 @@ async def bob_vote(poll: Poll, user: TelegramUser, choice: VoteChoice) -> Dict[s
         if choice == VoteChoice.YES:
             channel_ent: Channel = await get_channel(poll.chat.chat_id)
             msg: Optional[str] = None
-            async for m in client.iter_messages(entity=channel_ent, ids=poll.msg_id):
-                msg = m
-                break # lol
+            if poll.msg_id: # with ids=none, the bot will break; apparently bots aren't allowed to iterate thru all messages
+                async for m in client.iter_messages(entity=channel_ent, ids=poll.msg_id):
+                    msg = m
+                    break # lol
 
             if msg is not None:
                 try:
