@@ -317,6 +317,7 @@ async def handler_bob(event: NewMessage):
             if poll.poll_msg_id is None:
                 logger.error("poll_msg_id is None, sleeping 1s. hopefully it'll be ready by then")
                 await asyncio.sleep(1)
+                await poll.refresh_from_db(fields=['poll_msg_id'])
 
             if poll.poll_msg_id is None:
                 logger.error("still not ready, oh well...")
