@@ -125,8 +125,6 @@ async def get_user(user_id, get_peer=False, force_refresh=False) -> Union[PeerUs
 
 
 async def build_bob_message(poll: Poll, ended: bool, counts: Dict[VoteChoice, int], winner: VoteChoice = None) -> Dict[str, Union[str, List[Button]]]:
-    assert not ended or winner is not None, "Poll ended, but no winner passed to build_bob_message!"
-
     if not ended:
         message_lines = [
             f"{poll.source.get_link()} would like to kick {poll.target.get_link()}.",
@@ -144,7 +142,18 @@ async def build_bob_message(poll: Poll, ended: bool, counts: Dict[VoteChoice, in
             "poll": poll,
             "buttons": buttons,
         }
-    else:
+    elif winner is None: # poll ended, but no winner
+        logger.warning(f"Poll {poll.poll_id} ended, but there was no winner!")
+        message_lines = [
+            f"Something went wrong, so we've done nothing to {poll.target.get_link()}.",
+            "Please try again."
+        ]
+
+        return {
+            "message": '\n'.join(message_lines),
+            "poll": poll,
+        }
+    else: # poll ended, and we have a winner
         kicked: bool = winner == VoteChoice.YES
         users_list: List[int] = await poll.get_voters(winner)
         users: str = ', '.join([user.get_link() for user in users_list])
