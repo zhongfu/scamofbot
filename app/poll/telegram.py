@@ -124,6 +124,12 @@ async def get_user(user_id, get_peer=False, force_refresh=False) -> Union[PeerUs
             raise ValueError(f"Got a {type(entity)} instead of a User!")
 
 
+async def get_message(channel, msg_id) -> Message:
+    assert msg_id is not None, "msg_id cannot be none"
+    async for m in client.iter_messages(entity=channel, ids=msg_id):
+        return m
+
+
 async def build_bob_message(poll: Poll, ended: bool, counts: Dict[VoteChoice, int], winner: VoteChoice = None) -> Dict[str, Union[str, List[Button]]]:
     if not ended:
         message_lines = [
@@ -182,10 +188,8 @@ async def bob_vote(poll: Poll, user: TelegramUser, choice: VoteChoice) -> Dict[s
         if choice == VoteChoice.YES:
             channel_ent: Channel = await get_channel(poll.chat.chat_id)
             msg: Optional[str] = None
-            if poll.msg_id: # with ids=none, the bot will break; apparently bots aren't allowed to iterate thru all messages
-                async for m in client.iter_messages(entity=channel_ent, ids=poll.msg_id):
-                    msg = m
-                    break # lol
+            if poll.msg_id:
+                msg = await get_message(channel_ent, poll.msg_id)
 
             if msg is not None:
                 try:
@@ -331,9 +335,7 @@ async def handler_bob(event: NewMessage):
             if poll.poll_msg_id is None:
                 logger.error("still not ready, oh well...")
             else:
-                async for m in client.iter_messages(entity=chat_ent, ids=poll.poll_msg_id):
-                    msg = m
-                    break # lol
+                msg = await get_message(chat_ent, poll.poll_msg_id)
 
             if msg is not None:
                 await event.reply(f'Please vote <a href="https://t.me/c/{str(chat_id)[4:]}/{poll.poll_msg_id}">here</a> instead.')
