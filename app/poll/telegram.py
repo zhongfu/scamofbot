@@ -338,7 +338,21 @@ async def handler_bob(event: NewMessage):
                 msg = await get_message(chat_ent, poll.poll_msg_id)
 
             if msg is not None:
-                await event.reply(f'Please vote <a href="https://t.me/c/{str(chat_id)[4:]}/{poll.poll_msg_id}">here</a> instead.')
+                if await is_participant(chat_ent, from_user_ent):
+                    msg_dict: Dict[str, Union[str, List[Button]]] = await bob_vote(poll, from_user, VoteChoice.YES)
+
+                    if not msg_dict.get('unchanged', False):
+                        await msg.edit(
+                            msg_dict['message'],
+                            buttons = msg_dict.get('buttons')
+                        )
+                        await event.reply(f'There\'s already an active poll <a href="https://t.me/c/{str(chat_id)[4:]}/{poll.poll_msg_id}">here</a>. Your vote for "Yes" has been added.')
+                    else:
+                        await event.reply(f'There\'s already an active poll <a href="https://t.me/c/{str(chat_id)[4:]}/{poll.poll_msg_id}">here</a>.')
+                else:
+                    logger.error(f"User {from_user} is trying to vote in poll {poll} by sending /bob, but is not in the channel!")
+                    await event.reply(f'There\'s already an active poll <a href="https://t.me/c/{str(chat_id)[4:]}/{poll.poll_msg_id}">here</a>.')
+
                 return
             else:
                 logger.warning("Our old poll message got deleted for some reason!")
