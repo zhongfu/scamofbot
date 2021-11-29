@@ -297,13 +297,16 @@ async def handler_bob(event: NewMessage):
         return
 
     from_user_ent: PeerUser = event.from_id
-    from_user: TelegramUser = await TelegramUser.get_user(client, from_user_ent.user_id)
+    is_user: bool = isinstance(event.from_id, (PeerUser, User, InputPeerUser))
 
-    chat_id: int = utils.get_peer_id(chat_ent)
-    chat: TelegramChat = await TelegramChat.get_chat(client, chat_id)
+    if is_user:
+        from_user: TelegramUser = await TelegramUser.get_user(client, from_user_ent.user_id)
 
-    if not isinstance(target_ent, PeerUser) or target_ent.user_id == TG_BOT_ID or await is_admin(chat_ent, target_ent):
-        logger.warning(f"User {from_user} tried to bob an admin (?) {target_ent} in {chat}!")
+        chat_id: int = utils.get_peer_id(chat_ent)
+        chat: TelegramChat = await TelegramChat.get_chat(client, chat_id)
+
+    if not is_user or not isinstance(target_ent, PeerUser) or target_ent.user_id == TG_BOT_ID or await is_admin(chat_ent, target_ent):
+        logger.warning(f"User {from_user} tried to bob an admin or unsupported target {target_ent} in {chat}!")
         await event.reply("I'm sorry Dave, I'm afraid I can't do that.")
         return
 
