@@ -65,64 +65,60 @@ async def is_admin(channel, user):
 
 
 """
-chat_id can be a chat id or a chat public link name without `@`
+ent_id can be a telegram id or an @usernamechat public link name without `@`
+works with channels and users, hopefully
 does it have to include the id prefix as well? I don't know lol
 """
-async def get_channel(chat_id, get_peer=False, force_refresh=False) -> Union[PeerChannel, Channel]: # throws ValueError if not found, or not channel
-    if isinstance(chat_id, str):
+async def get_entity(ent_id, get_peer=False, force_refresh=False) -> Union[PeerChannel, Channel, PeerUser, User]: # throws ValueError if not found, or not channel
+    if isinstance(ent_id, str):
         # remove @ if required, I guess
-        chat_id = chat_id.lstrip('@')
+        ent_id = ent_id.lstrip('@')
 
     if get_peer and force_refresh:
         raise ValueError("Cannot use get_peer and force_refresh together!")
 
     if get_peer:
-        input_entity: TypeInputPeer = await client.get_input_entity(chat_id)
+        input_entity: TypeInputPeer = await client.get_input_entity(ent_id)
 
         if isinstance(input_entity, InputPeerChannel):
             return PeerChannel(input_entity.channel_id)
+        elif isinstance(input_entity, InputPeerUser):
+            return PeerUser(input_entity.user_id)
         else:
-            raise ValueError(f"Got a {type(input_entity)} instead of an InputPeerChannel!")
+            raise ValueError(f"Got a {type(input_entity)} instead of an InputPeerChannel or InputPeerUser!")
     else:
         # one of these will throw ValueError if not found
-        input_entity: Union[TypeInputPeer, int, str] = await client.get_input_entity(chat_id) if not force_refresh else chat_id
+        input_entity: Union[TypeInputPeer, int, str] = await client.get_input_entity(ent_id) if not force_refresh else ent_id
         entity: Entity = await client.get_entity(input_entity)
 
-        if isinstance(entity, Channel):
+        if isinstance(entity, (Channel, User)):
             return entity
         else:
-            raise ValueError(f"Got a {type(entity)} instead of a Channel!")
+            raise ValueError(f"Got a {type(entity)} instead of a Channel or User!")
 
+"""
+chat_id can be a chat id or a chat public link name without `@`
+does it have to include the id prefix as well? I don't know lol
+"""
+async def get_channel(chat_id, get_peer=False, force_refresh=False) -> Union[PeerChannel, Channel]: # throws ValueError if not found, or not channel
+    ent: Union[PeerChannel, Channel, PeerUser, User] = await get_entity(chat_id, get_peer, force_refresh)
+    if get_peer and not isinstance(ent, PeerChannel):
+        raise ValueError(f"Got a {type(ent)} instead of a PeerChannel!")
+    elif not get_peer and not isinstance(peer, Channel):
+        raise ValueError(f"Got a {type(ent)} instead of a Channel!")
+    return peer
 
 """
 user_id can be a user id or username without `@`
 does it have to include the id prefix as well? I don't know lol
 """
 async def get_user(user_id, get_peer=False, force_refresh=False) -> Union[PeerUser, User]: # throws ValueError if not found, or not user
-    if isinstance(user_id, str):
-        # remove @ if required, I guess
-        user_id = user_id.lstrip('@')
-
-    if get_peer and force_refresh:
-        raise ValueError("Cannot use get_peer and force_refresh together!")
-
-    if get_peer:
-        input_entity: TypeInputPeer = await client.get_input_entity(user_id)
-
-        if isinstance(input_entity, InputPeerUser):
-            return PeerUser(input_entity.user_id)
-        else:
-            raise ValueError(f"Got a {type(input_entity)} instead of an InputPeerUser!")
-    else:
-        # one of these will throw ValueError if not found
-        input_entity: Union[TypeInputPeer, int, str] = await client.get_input_entity(user_id) if not force_refresh else user_id
-        entity: Entity = await client.get_entity(input_entity)
-
-        if isinstance(entity, User):
-            return entity
-        else:
-            raise ValueError(f"Got a {type(entity)} instead of a User!")
-
+    ent: Union[PeerChannel, Channel, PeerUser, User] = await get_entity(chat_id, get_peer, force_refresh)
+    if get_peer and not isinstance(ent, PeerUser):
+        raise ValueError(f"Got a {type(ent)} instead of a PeerUser!")
+    elif not get_peer and not isinstance(peer, User):
+        raise ValueError(f"Got a {type(ent)} instead of a User!")
+    return peer
 
 async def get_message(channel, msg_id) -> Message:
     assert msg_id is not None, "msg_id cannot be none"
