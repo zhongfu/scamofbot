@@ -104,21 +104,21 @@ async def get_channel(chat_id, get_peer=False, force_refresh=False) -> Union[Pee
     ent: Union[PeerChannel, Channel, PeerUser, User] = await get_entity(chat_id, get_peer, force_refresh)
     if get_peer and not isinstance(ent, PeerChannel):
         raise ValueError(f"Got a {type(ent)} instead of a PeerChannel!")
-    elif not get_peer and not isinstance(peer, Channel):
+    elif not get_peer and not isinstance(ent, Channel):
         raise ValueError(f"Got a {type(ent)} instead of a Channel!")
-    return peer
+    return ent
 
 """
 user_id can be a user id or username without `@`
 does it have to include the id prefix as well? I don't know lol
 """
 async def get_user(user_id, get_peer=False, force_refresh=False) -> Union[PeerUser, User]: # throws ValueError if not found, or not user
-    ent: Union[PeerChannel, Channel, PeerUser, User] = await get_entity(chat_id, get_peer, force_refresh)
+    ent: Union[PeerChannel, Channel, PeerUser, User] = await get_entity(user_id, get_peer, force_refresh)
     if get_peer and not isinstance(ent, PeerUser):
         raise ValueError(f"Got a {type(ent)} instead of a PeerUser!")
-    elif not get_peer and not isinstance(peer, User):
+    elif not get_peer and not isinstance(ent, User):
         raise ValueError(f"Got a {type(ent)} instead of a User!")
-    return peer
+    return ent
 
 async def get_message(channel, msg_id) -> Message:
     assert msg_id is not None, "msg_id cannot be none"
