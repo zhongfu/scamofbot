@@ -1,4 +1,4 @@
-telethon==1.23.*
-tortoise-orm==0.17.*
-aerich==0.5.*
-cachetools==4.2.*
+telethon==1.26.*
+tortoise-orm==0.19.*
+aerich==0.7.*
+cachetools==5.2.*

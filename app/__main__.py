@@ -68,14 +68,16 @@ async def shutdown():
 
 
 if __name__ == '__main__':
-    logger.info("(Press Ctrl+C to stop this)")
-    loop = asyncio.get_event_loop()
-    task = loop.create_task(startup())
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt as e:
-        logger.info("Quitting...")
-        task.cancel()
-        loop.run_until_complete(shutdown())
-    finally:
-        loop.close()
+	logger.info("(Press Ctrl+C to stop this)")
+	while True:
+		loop = asyncio.new_event_loop()
+		task = loop.create_task(startup())
+		try:
+			loop.run_forever()
+		except KeyboardInterrupt as e:
+			logger.info("Quitting...")
+			task.cancel()
+			loop.run_until_complete(shutdown())
+			break
+		finally:
+			loop.close()
