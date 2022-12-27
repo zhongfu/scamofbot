@@ -17,7 +17,7 @@ from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned
 from tortoise.queryset import QuerySet
 from tortoise.functions import Count
 
-from app.models import TelegramUser, TelegramChat
+from bot.models import TelegramUser, TelegramChat
 
 from config import POLL__LIMIT, POLL__LIMIT_DURATION, POLL__THRESHOLD
 

@@ -25,25 +25,25 @@ async def init_db():
 			modules.append(f)
 
 	# initialize modules n shit
-	tortoise_models = ['app.models', 'aerich.models']
+	tortoise_models = ['bot.models', 'aerich.models']
 	for module in modules:
-		logger.info(f'loading app.{module}')
+		logger.info(f'loading bot.{module}')
 		try:
-			modname = f"app.{module}.telegram"
-			handlers = importlib.import_module(f'.telegram', package=f'app.{module}')
+			modname = f"bot.{module}.telegram"
+			handlers = importlib.import_module(f'.telegram', package=f'bot.{module}')
 			for funcname, func in inspect.getmembers(handlers, inspect.isfunction):
 				if funcname.startswith('handler_'):
-					logger.info(f'adding app.{module}.telegram.{funcname}')
+					logger.info(f'adding bot.{module}.telegram.{funcname}')
 					tg.add_event_handler(func)
 		except ModuleNotFoundError as e:
 			if str(e) != f"No module named '{modname}'":
 				logger.exception(f"Error loading {modname}")
 
 		try:
-			modname = f"app.{module}.models"
-			importlib.import_module('.models', package=f'app.{module}')
-			logger.info(f'adding app.{module}.models')
-			tortoise_models.append(f'app.{module}.models')
+			modname = f"bot.{module}.models"
+			importlib.import_module('.models', package=f'bot.{module}')
+			logger.info(f'adding bot.{module}.models')
+			tortoise_models.append(f'bot.{module}.models')
 		except ModuleNotFoundError as e:
 			if str(e) != f"No module named '{modname}'":
 				logger.exception(f"Error loading {modname}")

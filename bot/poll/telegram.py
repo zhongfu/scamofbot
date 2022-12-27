@@ -5,8 +5,8 @@ from typing import Dict, List, Optional, Union
 import cachetools
 from tortoise.exceptions import DoesNotExist
 
-from app.poll.models import Poll, PollLimitReached, VoteChoice
-from app.util import Timer
+from bot.poll.models import Poll, PollLimitReached, VoteChoice
+from bot.util import Timer
 from config import POLL__LIMIT_DURATION, TG_BOT_ID, TG_BOT_USERNAME, POLL__CHANNELS, POLL__THRESHOLD
 from ..telegram import client
 from ..models import TelegramUser, TelegramChat
