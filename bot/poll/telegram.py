@@ -192,6 +192,7 @@ async def bob_vote(poll: Poll, user: TelegramUser, choice: VoteChoice) -> Dict[s
                     await msg.delete()
                 except MessageDeleteForbiddenError:
                     logger.warning(f"No message delete permissions in {poll.chat_id}!")
+                    logger.warning(f"Message: {msg}")
                     need_delete_perms = True
                 except Exception:
                     logger.exception(f"Uh oh, got an exception while trying to delete a message ({poll})")
