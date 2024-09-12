@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "scamofbot"
+version = "0.1.0"
+description = ""
+authors = ["zhongfu <me@zhongfu.li>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+telethon = "^1.36.0"
+tortoise-orm = "^0.21.6"
+aerich = "^0.7.2"
+cachetools = "^5.5.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
